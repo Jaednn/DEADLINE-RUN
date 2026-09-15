@@ -332,7 +332,7 @@ if(rs==="tile"){const k=key(player);if(k!==lastPlayerTile){lastPlayerTile=k;plan
 else{rAcc+=dt;const interval=parseInt(rs);if(rAcc>=interval||lastPlan.path.length===0){rAcc=0;planNPC()}}
 nAcc+=dt;const nMs=NPC_NORMAL;if(nAcc>=nMs){nAcc=0;npcMove()}
 if(player.x===npc.x&&player.y===npc.y)endGame("caught");updateHUD();
-}
+} 
 
 let lastTs=null;
 function loop(ts){if(lastTs===null)lastTs=ts;const dt=Math.min(100,ts-lastTs);lastTs=ts;if(!gameOver)update(dt);render();requestAnimationFrame(loop)}
