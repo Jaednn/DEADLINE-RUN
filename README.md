@@ -11,7 +11,7 @@ Proyek game 2 dimensi berbasis web browser yang mengimplementasikan algoritma pe
 
 --
 
-#Kontrol Permainan & Debug
+## Kontrol Permainan & Debug
 W, A, S, D atau Arrow Keys: Menggerakkan Player.
 [Tombol/Key D]: Mengaktifkan / menonaktifkan Debug Overlay.
 
