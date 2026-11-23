@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Deadline: Run — Tahap 3 (Raid Planner: CSP + Local Search)</title>
+<link rel="stylesheet" href="assets/battle-bg-data.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="stage">
+<div class="canvas-holder"><canvas id="game" width="640" height="640"></canvas></div>
+<div class="side-l"><h1>DEADLINE: RUN <small>— Tahap 3: Raid Planner (CSP + Local Search)</small></h1><div class="tag">"DEADLINE WOKK!!"</div><div class="hud"><div class="chip"><small>Nyawa</small><b id="hudLives" class="heart">♥♥♥</b></div><div class="chip"><small>Bintang</small><b id="hudWins">0 / 3</b></div><div class="chip"><small>Item dibawa</small><b id="hudItem" style="font-size:12px">—</b></div></div><div class="keys">Map: <b>W A S D</b> / panah · ambil item (1 slot) · hindari TUGAS<br><b>F</b> = layar penuh</div></div>
+</div>
+<div class="battle" id="battle">
+  <div class="b-flash" id="bFlash"></div>
+  <div class="b-banner" id="bBanner">⚔ BATTLE!</div>
+  <div class="b-title"><div>⚔ BATTLE <span id="bTest"></span></div><span id="bTurn">—</span></div>
+  <div class="b-arena">
+    <div class="b-unit mc" id="bMC">
+      <div class="b-info">
+        <div class="b-name">MC (Mahasiswa)</div>
+        <div class="bar mc"><i id="bMcHp" style="width:100%"></i></div>
+        <div class="b-hptxt" id="bMcHpTxt">HP 1000/1000</div>
+        <div class="pips" id="bMcSp"></div>
+        <div class="tags" id="bMcTags"></div>
+      </div>
+      <img id="bMCImg" alt="MC">
+    </div>
+    <div class="b-vs">VS</div>
+    <div class="b-unit npc" id="bNPC">
+      <div class="b-info">
+        <div class="b-name">Anomali TUGAS</div>
+        <div class="bar npc"><i id="bNpcHp" style="width:100%"></i></div>
+        <div class="b-hptxt" id="bNpcHpTxt">HP 1100/1100</div>
+        <div class="tags" id="bNpcTags"></div>
+      </div>
+      <img id="bNPCImg" alt="Anomali Tugas">
+    </div>
+  </div>
+  <div class="b-log" id="bLog"></div>
+  <div class="b-actions" id="bActions">
+    <button id="btnBasic">Basic Attack<small>100 dmg · +1 SP</small></button>
+    <button id="btnE">Skill E<small>300 dmg · −2 SP</small></button>
+    <button id="btnQ">Ultimate Q<small>500 dmg · −3 SP</small></button>
+    <button id="btnItem">Pakai Item<small>−1 SP · tidak skip giliran</small></button>
+  </div>
+  <div class="b-hint">Hotkey: 1/J Basic · 2/E Skill · 3/Q Ultimate · 4/R Item &nbsp;|&nbsp; Villain jalan duluan karena dia yang menangkap.</div>
+<div class="b-result" id="bResult"><div class="rs-rays"></div><div class="rs-conf" id="rsConf"></div><div class="rs-card"><div class="rs-stars" id="rsStars"></div><h2 id="bResTitle">—</h2><p id="bResSub"></p><div class="rs-stats" id="rsStats"></div><div class="rs-prog" id="rsProg"></div><button id="bContinue">Lanjut</button></div></div>
+</div>
+
+<div class="overlay" id="overlay"><div class="ov-fx" id="ovFx"></div><div class="overlay-box"><div class="ov-icon" id="ovIcon"></div><div class="rs-stars" id="ovStars"></div><h2 id="overTitle">Menang!</h2><p id="overSub"></p><div class="rs-stats" id="ovStats"></div><button id="again">Main Lagi</button></div></div>
+
+<div class="topbtns"><button id="openD1">🗺 Debug Overlay</button><button id="openD2">🧠 Debug Overlay AI</button><button id="openD3">🧩 Debug Tahap 3</button><button id="openLab3">🧪 Lab Tahap 3</button><button id="openKB">📖 Tab KB</button><button id="openPL">🗺 Tab Planner</button><button id="openMenu">☰ Menu</button></div>
+<div class="toast" id="toast"></div>
+<div class="start" id="startScr">
+  <h1>DEADLINE: RUN</h1>
+  <div class="tag">"DEADLINE WOKK!!"</div>
+  <p>Kumpulkan item, hindari Anomali Tugas, dan menangkan 3 battle sebelum 3 nyawa habis.</p>
+  <div class="start-controls">
+    <button id="startBtn">▶ MULAI GAME</button>
+  </div>
+  <p class="start-help">Kontrol: <b>W A S D</b> / panah · <b>F</b> layar penuh · <b>M</b> menu · <b>O</b> debug</p>
+</div>
+<div class="pop" id="pop1"><div class="pop-head"><h2>DEBUG TAHAP 1 — Pathfinding</h2><button class="x" id="pop1x">✕ Tutup</button></div>
+<div class="field"><label for="algo">Pathfinding Anomali Tugas</label>
+<select id="algo"><option value="ucs">UCS (h = 0)</option><option value="manhattan" selected>A* — Manhattan</option><option value="euclidean">A* — Euclidean</option></select></div>
+<div class="field"><label for="replan">Interval replan</label>
+<select id="replan"><option value="100">100 ms — sangat sering</option><option value="300" selected>300 ms — normal</option><option value="700">700 ms — jarang</option><option value="tile">Setiap player pindah tile</option></select></div>
+<div class="check"><input type="checkbox" id="debug" checked><label for="debug" style="margin:0">Debug overlay peta: expanded node + jalur</label></div>
+
+
+<div class="row-chips"><div class="chip"><small>Node/plan (path)</small><b id="hudNodes">0</b></div><div class="chip"><small>Total node (path)</small><b id="hudTotal">0</b></div></div><div class="stat"><span>Rata-rata node/plan (path)</span><span id="avg">—</span></div><div class="stat"><span>Plan termurah / termahal</span><span id="minmax">—</span></div><div class="stat"><span>Total replan</span><span id="replanStat">0</span></div>
+<p class="note">Jalur kuning + kotak merah muda di peta hanya tampil selama jendela ini terbuka.</p></div>
+<div class="pop" id="pop2"><div class="pop-head"><h2>DEBUG TAHAP 2 — AI Battle</h2><button class="x" id="pop2x">✕ Tutup</button></div>
+<div class="field"><label for="bAlgo">Algoritma adversarial</label>
+<select id="bAlgo"><option value="minimax">Minimax (tanpa pruning)</option><option value="alphabeta" selected>Alpha-Beta pruning</option><option value="expectimax">Expectimax (MC = chance node)</option></select></div>
+<div class="field"><label for="bDepth">Kedalaman (ply = 1 aksi)</label>
+<select id="bDepth"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></div>
+<div class="field"><label for="bEval">Fungsi evaluasi</label>
+<select id="bEval"><option value="hpdiff">E1 — Selisih HP</option><option value="ratio">E2 — Rasio HP</option><option value="resource" selected>E3 — HP + resource (SP/buff/item/CD)</option><option value="aggressive">E4 — Agresif</option><option value="defensive">E5 — Defensif</option></select></div>
+<div class="field"><label for="bOrder">Urutan aksi (move ordering)</label>
+<select id="bOrder"><option value="fixed">Tetap (default)</option><option value="reverse">Dibalik</option><option value="heuristic" selected>Heuristik (best-first)</option><option value="random">Acak</option></select></div>
+
+
+<div class="stat"><span>Battle (menang/kalah)</span><span id="stBattle">0 / 0</span></div><div class="stat"><span>Keputusan AI</span><span id="stDec">0</span></div><div class="stat"><span>Total node battle</span><span id="stNodes">0</span></div><div class="stat"><span>Rata-rata node/keputusan</span><span id="stAvgNodes">—</span></div><div class="dbg" id="aiDebug"><h3>AI DEBUG — Keputusan Anomali Tugas</h3><div class="muted">Belum ada battle. Tertangkap NPC, atau tekan <b>Test Battle</b> di jendela ini.</div></div>
+<p class="note">Battle: MC 1000 HP vs Villain 1100 HP (sudah dituning lewat simulasi). Semua konstanta ada di objek <b>B</b> pada kode.</p></div>
+<div class="modal" id="menu"><div class="modal-box" style="width:min(520px,100%)"><div class="modal-head"><h2>MENU</h2><button id="menuClose" class="secondary" style="width:auto;margin:0">Tutup</button></div>
+<p class="sub">Kumpulkan item di map, hindari Anomali Tugas. Kalau dia mendekat, kalian masuk battle turn-based. Menangkan <b>3 battle</b> sebelum <b>3 nyawa</b> habis. Otak villain memakai Minimax / Alpha-Beta / Expectimax.</p><div class="row2"><button id="testBattle">Test Battle</button><button id="openLab" class="secondary" style="margin-top:4px">Experiment Lab</button></div>
+<button id="openDefs" class="secondary">Definisi Formal (untuk laporan)</button>
+<button id="restart" class="secondary">Restart Game</button>
+
+<h3 class="sec">LEGENDA MEDAN</h3>
+<div class="legend">
+<div class="leg"><i class="sw" style="background:#e6d3a5"></i>Jalanan (0)</div>
+<div class="leg"><i class="sw" style="background:#9b7653"></i>Tanah (1)</div>
+<div class="leg"><i class="sw" style="background:#3f7138"></i>Rumput panjang (2)</div>
+<div class="leg"><i class="sw" style="background:#6a4a2a"></i>Lumpur (3)</div>
+<div class="leg"><i class="sw" style="background:#2f82c2"></i>Sungai (5)</div>
+<div class="leg"><i class="sw" style="background:#707a82"></i>Batu (wall)</div>
+<div class="leg"><i class="sw" style="background:#8b4146"></i>Bangunan (wall)</div>
+<div class="leg"><i class="sw" style="background:#ff5a5a"></i>Heal Potion</div>
+<div class="leg"><i class="sw" style="background:#ffb13d"></i>Damage Buff</div>
+<div class="leg"><i class="sw" style="background:#4aa8ff"></i>SP Potion</div>
+</div>
+
+<h3 class="sec">STATISTIK SESI</h3><div class="stat"><span>Hasil terakhir</span><span id="last">—</span></div></div></div>
+<div class="modal" id="lab"><div class="modal-box">
+<div class="modal-head"><h2>EXPERIMENT LAB — simulasi otomatis battle</h2><button id="labClose" class="secondary" style="width:auto;margin:0">Tutup</button></div>
+<div class="lab-controls">
+<div><label for="labExp">Eksperimen</label><select id="labExp">
+<option value="1">1. Minimax vs Alpha-Beta (node count)</option>
+<option value="2">2. Perbandingan fungsi evaluasi</option>
+<option value="3">3. Perbandingan urutan aksi</option>
+<option value="4">4. Perbandingan kedalaman</option>
+<option value="5">5. Tingkah laku NPC (agresif/defensif)</option>
+<option value="6">6. Expectimax vs Alpha-Beta</option></select></div>
+<div><label for="labN">Battle per konfigurasi</label><select id="labN"><option>30</option><option selected>60</option><option>120</option><option>250</option></select></div>
+<div><label for="labMC">Bot lawan (MC)</label><select id="labMC"><option value="greedy" selected>Greedy (damage terbesar)</option><option value="random">Random</option><option value="smart">Smart (alpha-beta d4)</option><option value="prob">Probabilistik (sesuai model expectimax)</option></select></div>
+<div><label for="labItem">Item awal MC</label><select id="labItem"><option value="random" selected>Acak (kosong/heal/buff/sp)</option><option value="none">Tanpa item</option></select></div>
+<div><button id="labRun">Jalankan</button></div>
+</div>
+<div class="muted" id="labProgress" style="font-size:12px"></div>
+<div class="res" id="labResult"></div>
+<div class="row2" style="margin-top:10px"><button id="labCopy" class="secondary">Salin CSV</button><button id="labDl" class="secondary">Unduh CSV</button></div>
+<textarea id="labCsv" style="display:none;width:100%;height:120px;margin-top:8px;background:#0b1015;color:#dfe;border:1px solid #435364"></textarea>
+</div></div>
+
+<div class="modal" id="defs"><div class="modal-box">
+<div class="modal-head"><h2>DEFINISI FORMAL — Adversarial Search (Minimax)</h2><button id="defsClose" class="secondary" style="width:auto;margin:0">Tutup</button></div>
+<div class="defs" id="defsBody"></div>
+</div></div>
+
+<div class="pop" id="pop3"><div class="pop-head"><h2>DEBUG TAHAP 3 — Raid Planner (CSP + Local Search)</h2><button class="x" id="pop3x">✕ Tutup</button></div><div class="grid2"><div class="field"><label for="p3alg">Local search</label><select id="p3alg"><option value="hc">Steepest-ascent</option><option value="hcs" selected>+ Sideways (100)</option><option value="rr">Random restart</option><option value="sa">Simulated annealing</option><option value="mc">Min-Conflicts (CSP)</option></select></div><div class="field"><label for="p3cool">Cooling (SA)</label><select id="p3cool"><option value="0.9">0,90</option><option value="0.95" selected>0,95</option><option value="0.98">0,98</option><option value="0.995">0,995</option></select></div><div class="field"><label for="p3N">Simulasi / evaluasi</label><select id="p3N"><option value="10">10</option><option value="20" selected>20</option><option value="40">40</option></select></div><div class="field"><label for="p3maxE">Anggaran evaluasi</label><select id="p3maxE"><option value="60">60</option><option value="120" selected>120</option><option value="300">300</option></select></div><div class="field"><label for="p3sel">CSP: pilih variabel</label><select id="p3sel"><option value="static">statis</option><option value="mrv">MRV</option><option value="mrv_degree" selected>MRV + degree</option></select></div><div class="field"><label for="p3ord">CSP: urutan nilai</label><select id="p3ord"><option value="static" selected>statis</option><option value="lcv">LCV</option></select></div><div class="field"><label for="p3inf">CSP: inference</label><select id="p3inf"><option value="none">tanpa</option><option value="fc" selected>forward checking</option><option value="mac">MAC (AC-3)</option></select></div><div class="field"><label for="p3side">Maks sideways</label><select id="p3side"><option value="10">10</option><option value="50">50</option><option value="100" selected>100</option><option value="200">200</option></select></div><div class="field"><label for="p3bud">Budget</label><select id="p3bud"><option value="auto" selected>bawaan (5/7/9)</option><option value="rancangan">rancangan (6/9/12)</option><option value="5">5</option><option value="7">7</option><option value="9">9</option><option value="12">12</option></select></div><div class="check" style="margin:22px 0 0"><input type="checkbox" id="p3joint"><label for="p3joint" style="margin:0">Move gabungan (karakter+item)</label></div></div><div class="row2"><button id="p3new">Rencanakan baru</button><button class="secondary" id="p3same" style="margin-top:0">Ulangi (seed sama)</button></div><div id="p3out"></div><p class="note">Tombol P membuka/menutup panel ini. Ikon squad tampil di atas NPC saat masa grace atau saat panel terbuka.</p></div><div class="modal" id="lab3"><div class="modal-box"><div class="modal-head"><h2>EXPERIMENT LAB TAHAP 3 — CSP &amp; Local Search</h2><button id="lab3Close" class="secondary" style="width:auto;margin:0">Tutup</button></div><div class="lab-controls"><div><label for="l3Exp">Eksperimen</label><select id="l3Exp"><option value="E1">E1 Heuristik CSP (statis, MRV, degree, FC, LCV, MAC)</option><option value="E2">E2 Budget makin ketat (bukti tidak ada solusi)</option><option value="E3">E3 Pemecah simetri C5 hidup/mati</option><option value="E4">E4 Skala slot 3–5</option><option value="E5">E5 Backtracking vs Min-Conflicts (budget &amp; noise)</option><option value="E6" selected>E6 Metode local search (+ exhaustive)</option><option value="E7">E7 Noise: simulasi per evaluasi</option><option value="E8">E8 Move tunggal vs gabungan (ridge)</option><option value="E9">E9 Pipeline (CSP→LS) vs penalti</option><option value="E10">E10 Jarak local search dari optimum exhaustive</option><option value="E12">E12 Cooling schedule SA</option><option value="E11">E11 Planner vs konfigurasi tetap, per bot</option></select></div><div><label for="l3Slots">Slot (E1–E3, LS)</label><select id="l3Slots"><option>3</option><option>4</option><option>5</option></select></div><div><label for="l3Bud">Budget</label><select id="l3Bud"><option>5</option><option selected>7</option><option>9</option><option>12</option></select></div><div><label for="l3K">Run per baris (LS)</label><select id="l3K"><option>10</option><option selected>20</option><option>40</option></select></div><div><label for="l3P">Target p*</label><select id="l3P"><option>0.4</option><option selected>0.5</option><option>0.6</option><option>0.7</option></select></div><div><button id="l3Btn">Jalankan</button></div></div><div class="muted" id="l3Prog" style="font-size:12px"></div><div class="res" id="l3Res"></div><div class="row2" style="margin-top:10px"><button id="l3Copy" class="secondary">Salin CSV</button><button id="l3Dl" class="secondary">Unduh CSV</button></div><textarea id="l3Csv" style="display:none;width:100%;height:120px;margin-top:8px;background:#0b1015;color:#dfe;border:1px solid #435364"></textarea></div></div>
+<div class="pop" id="popKB"><div class="pop-head"><h2>DEBUG TAHAP 4 — Knowledge Base (KB)</h2><button class="x" id="popKBx">✕ Tutup</button></div><div id="tab-kb"></div></div>
+<div class="pop" id="popPL"><div class="pop-head"><h2>DEBUG TAHAP 4 — Automated Planner (PDDL)</h2><button class="x" id="popPLx">✕ Tutup</button></div><div id="tab-planner"></div></div>
+
+<!-- ===== Aset (base64 tileset peta & sprite battle) ===== -->
+<script src="assets/tileset-data.js"></script>
+<script src="assets/battle-sprites-data.js"></script>
+
+<!-- ===== Tahap 1: Pathfinding (UCS / A*) ===== -->
+<script src="tahap1-pathfinding/engine.js"></script>
+
+<!-- ===== Tahap 2: Adversarial Search (Minimax / Alpha-Beta / Expectimax) ===== -->
+<script src="tahap2-battle/engine.js"></script>
+
+<!-- ===== Core: state global & explore-mode game loop ===== -->
+<script src="core/state.js"></script>
+<script src="core/explore.js"></script>
+
+<!-- ===== Tahap 2: UI battle, debug overlay AI, experiment lab, definisi formal ===== -->
+<script src="tahap2-battle/ui.js"></script>
+<script src="tahap2-battle/debug.js"></script>
+<script src="tahap2-battle/lab.js"></script>
+<script src="tahap2-battle/defs.js"></script>
+
+<!-- ===== Core: event wiring + render loop + bootstrap (reset()+loop mulai di sini) ===== -->
+<script src="core/main.js"></script>
+
+<!-- ===== Tahap 3: CSP + Local Search (Raid Planner) — nge-hook ke tahap 2 lewat wrapping, jadi di-load PALING TERAKHIR ===== -->
+<script src="tahap3-csp/engine.js"></script>
+<script src="tahap3-csp/ui.js"></script>
+<script src="tahap3-csp/lab.js"></script>
+
+<!-- ===== Tahap 4: Knowledge Base & Planning (M1: KB Engine + M2: Planner) ===== -->
+<script src="tahap4-kb-planning/lib/tau-prolog.js"></script>
+<script src="tahap4-kb-planning/kb/kb-rules.js"></script>
+<script src="tahap4-kb-planning/kb/kb-compiler.js"></script>
+<script src="tahap4-kb-planning/kb/kb-engine.js"></script>
+<script src="tahap4-kb-planning/overlay/kb-panel.js"></script>
+<script src="tahap4-kb-planning/planning/pddl-parser.js"></script>
+<script src="tahap4-kb-planning/planning/domain.pddl.js"></script>
+<script src="tahap4-kb-planning/planning/planner.js"></script>
+<script src="tahap4-kb-planning/planning/zonegraph.js"></script>
+<script src="tahap4-kb-planning/overlay/planner-panel.js"></script>
+<script src="tahap4-kb-planning/npc/agent-loop.js"></script>
+<script src="tahap4-kb-planning/npc/world-adapter.js"></script>
+<script src="tahap4-kb-planning/overlay/interaksi-panel.js"></script>
+<script src="tahap4-kb-planning/tahap4-init.js"></script>
+
+</body>
+</html>

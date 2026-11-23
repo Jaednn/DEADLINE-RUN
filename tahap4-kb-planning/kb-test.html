@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><title>Tes KB Deadline:Run (Tahap 4 · M1)</title>
+<style>
+body{margin:0;background:#0d0f1f;color:#e8e8f0;font:14px system-ui;display:grid;grid-template-columns:340px 1fr;min-height:100vh}
+aside{padding:14px;border-right:1px solid #2b2f55;background:#11132a}aside h3{margin:0 0 8px}
+label{display:flex;align-items:center;gap:6px;margin:3px 0;font:13px ui-monospace,Consolas,monospace}
+main{padding:14px;max-width:760px}.sc button{margin:2px 4px 2px 0;background:#2f3a8f;color:#fff;border:0;border-radius:4px;padding:4px 10px;cursor:pointer}
+.row{margin:6px 0}.row input{width:150px;background:#0d0f1f;color:#fff;border:1px solid #3a3f70;border-radius:4px;padding:2px 6px}
+.hint{color:#8f95c9;font-size:12px}
+</style></head><body>
+<aside>
+  <h3>Simulasi sensor game (TELL)</h3>
+  <div class="hint">Ini pengganti game saat M1. Nanti fakta ini di-TELL otomatis oleh agent-loop.</div>
+  <div class="row">Posisi:
+    <div>Tugas <select id="p-tugas"></select></div><div>Revisi <select id="p-revisi"></select></div>
+    <div>Laporan <select id="p-laporan"></select></div><div>Dosen <select id="p-dosen"></select></div><div>MC <select id="p-mc"></select></div>
+  </div>
+  <label><input type="checkbox" id="c-hp"> hp_low(tugas)</label>
+  <label><input type="checkbox" id="c-busy"> busy(revisi)</label>
+  <label><input type="checkbox" id="c-sees"> sees(laporan,mc)</label>
+  <h3 style="margin-top:14px">Skenario cepat</h3>
+  <div class="sc"><button data-s="heal">Heal</button><button data-s="retreat">Retreat</button><button data-s="alert">Alert/Cegat</button><button data-s="busy">Revisi sibuk</button></div>
+</aside>
+<main><h2 style="margin-top:0">Tab KB — Knowledge Base Deadline:Run</h2><div id="tab-kb"></div></main>
+<script src="lib/tau-prolog.js"></script>
+<script src="kb/kb-rules.js"></script>
+<script src="kb/kb-compiler.js"></script>
+<script src="kb/kb-engine.js"></script>
+<script src="overlay/kb-panel.js"></script>
+<script>
+var kb = new KBEngine(KB_DATA, KBCompiler);
+var zones = ["gerbang","perpus","lab","lorong","posdosen","kantin","jembatan","asrama","kos"];
+var who = ["tugas","revisi","laporan","dosen","mc"];
+var start = {tugas:"asrama",revisi:"kantin",laporan:"perpus",dosen:"posdosen",mc:"gerbang"};
+who.forEach(function (w) {
+  var s = document.getElementById("p-" + w); s.innerHTML = zones.map(function (z) { return "<option>" + z + "</option>"; }).join("");
+  s.value = start[w]; s.onchange = sync;
+});
+["c-hp","c-busy","c-sees"].forEach(function (id) { document.getElementById(id).onchange = sync; });
+var panel = KBPanel.mount(document.getElementById("tab-kb"), kb);
+function sync() {
+  who.forEach(function (w) { kb.replace("at(" + w + ",_)", "at(" + w + "," + document.getElementById("p-" + w).value + ")"); });
+  [["c-hp","hp_low(tugas)"],["c-busy","busy(revisi)"],["c-sees","sees(laporan,mc)"]].forEach(function (c) {
+    document.getElementById(c[0]).checked ? kb.tell(c[1]) : kb.untell(c[1]);
+  });
+  panel.refresh();
+}
+function set(o) { Object.keys(o).forEach(function (k) { var e = document.getElementById(k); if (e.type === "checkbox") e.checked = o[k]; else e.value = o[k]; }); sync(); }
+var SC = {
+  heal: [{"p-tugas":"asrama","p-revisi":"kantin","c-hp":true,"c-busy":false}, "should_heal(X,tugas)"],
+  busy: [{"c-hp":true,"c-busy":true}, "should_heal(revisi,tugas)"],
+  retreat: [{"p-tugas":"lorong","p-dosen":"lorong"}, "must_retreat(tugas)"],
+  alert: [{"p-mc":"gerbang","p-laporan":"perpus","c-sees":true,"c-busy":false}, "should_block(revisi,Z)"]
+};
+document.querySelectorAll(".sc button").forEach(function (b) { b.onclick = function () { var s = SC[b.dataset.s]; set(s[0]); panel.ask(s[1]); }; });
+sync();
+</script></body></html>
